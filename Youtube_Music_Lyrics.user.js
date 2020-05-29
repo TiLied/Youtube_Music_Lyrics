@@ -5,7 +5,7 @@
 // @include     https://music.youtube.com/*
 // @require     https://code.jquery.com/jquery-3.5.1.min.js
 // @author      TiLied
-// @version     0.1.00
+// @version     0.1.01
 // @grant       GM_listValues
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -56,7 +56,7 @@ void function Main()
 			SetEvents();
 
 			Music();
-		}, oneSecond * 10);
+		}, oneSecond * 7);
 	});
 	
 }();
@@ -70,12 +70,10 @@ async function SetSettings(callBack)
 	try
 	{
 		//DeleteValues("all");
-		//if (debug && await GM.getValue("adm"))
-		//	DeleteValues("imdbe_cache");
 		//THIS IS ABOUT OPTIONS
 		//if (await HasValue("yml_options", JSON.stringify(options)))
 		//{
-		//	options = JSON.parse(await GM.getValue("imdbe_options"));
+		//	options = JSON.parse(await GM.getValue("yml_options"));
 		//	SetOptionsObj();
 		//}
 
@@ -437,7 +435,7 @@ function SetUI()
 {
 	var rightC = $(".middle-controls-buttons");
 	var mainP = $("#main-panel");
-	var divP = $("<div id=yml_lyricsPanel class='style-scope ytmusic-player-page'></div>").html("<pre class='style-scope ytmusic-player-baryt-formatted-string' style='color:inherit;'>Lyrics:</pre>");
+	var divP = $("<div id=yml_lyricsPanel class='style-scope ytmusic-player-page'></div>").html("<pre class='style-scope ytmusic-player-baryt-formatted-string' style='color:inherit; font-family:inherit; padding-left:5%;'>Lyrics:</pre>");
 	var divB = $("<div id=yml_lyricsButton class='right-controls-buttons style-scope ytmusic-player-bar'></div>").html("<a class='yt-simple-endpoint style-scope ytmusic-player-bar yt-formatted-string' style='color:inherit;'>Lyrics</a>");
 
 	if (debug)
@@ -463,7 +461,6 @@ function SetCSS()
 	position: absolute;\
 	z-index: 100;\
 	background-color: #1d1d1d;\
-	max-width: inherit;\
 		font-size:16px;\
 		overflow-y:scroll;\
 		color:#aaaaaa;\
@@ -507,7 +504,7 @@ function SetEvents()
 		let w = $("#main-panel").width();
 		let h = $("#main-panel").height();
 		$("#yml_lyricsPanel").attr({
-			style: "max-width:" + w + "px; max-height: " + h + "px;"
+			style: "max-height: " + h + "px;max-width:" + (w + 100) + "px;min-width:" + w + "px;"
 		});
 	});
 }
