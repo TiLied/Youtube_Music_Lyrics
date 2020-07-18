@@ -6,7 +6,7 @@
 // @require     https://code.jquery.com/jquery-3.5.1.min.js
 // @require     https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @author      TiLied
-// @version     0.2.00
+// @version     0.2.01
 // @grant       GM_listValues
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -117,7 +117,7 @@ class Options
 		{
 			case "zero":
 				{
-					return new Promise(function (resolve, reject)
+					return new Promise(function (resolve)
 					{
 						if ($.isEmptyObject(cache[id]) || typeof cache[id]["musics"][title] === "undefined")
 						{
@@ -132,7 +132,7 @@ class Options
 				}
 			case "one":
 				{
-					return new Promise(function (resolve, reject)
+					return new Promise(function (resolve)
 					{
 					//api - https://github.com/NTag/lyrics.ovh
 					GM.xmlHttpRequest({
@@ -142,17 +142,23 @@ class Options
 							onload: function (response)
 							{
 								if (debug) console.log(response);
-								let r = JSON.parse(response.responseText);
-								if (Object.keys(r)[0] === "lyrics")
+								if (response.status === 200)
 								{
-									lyrics = r["lyrics"];
-									if (debug) console.log(lyrics);
-									AddCache(id, artist, title, lyrics);
-									DisplayLyrics(id, title);
-									resolve(true);
+									let r = JSON.parse(response.responseText);
+									if (Object.keys(r)[0] === "lyrics")
+									{
+										lyrics = r["lyrics"];
+										if (debug) console.log(lyrics);
+										AddCache(id, artist, title, lyrics);
+										DisplayLyrics(id, title);
+										resolve(true);
+									} else
+									{
+										if (debug) console.log(r);
+										resolve(false);
+									}
 								} else
 								{
-									if (debug) console.log(r);
 									resolve(false);
 								}
 							},
@@ -166,7 +172,7 @@ class Options
 				}
 			case "two":
 				{
-					return new Promise(function (resolve, reject)
+					return new Promise(function (resolve)
 					{
 					//api - https://github.com/rhnvrm/lyric-api
 
@@ -177,17 +183,23 @@ class Options
 				onload: function (response)
 				{
 					if (debug) console.log(response);
-					let r = JSON.parse(response.responseText);
-					if (r["err"] === "none")
+					if (response.status === 200)
 					{
-						lyrics = r["lyric"];
-						if (debug) console.log(lyrics);
-						AddCache(id, artist, title, lyrics);
-						DisplayLyrics(id, title);
-						resolve(true);
-					} else
+						let r = JSON.parse(response.responseText);
+						if (r["err"] === "none")
+						{
+							lyrics = r["lyric"];
+							if (debug) console.log(lyrics);
+							AddCache(id, artist, title, lyrics);
+							DisplayLyrics(id, title);
+							resolve(true);
+						} else
+						{
+							if (debug) console.log(r);
+							resolve(false);
+						}
+					}else
 					{
-						if (debug) console.log(r);
 						resolve(false);
 					}
 				},
@@ -201,7 +213,7 @@ class Options
 				}
 			case "three":
 				{
-					return new Promise(function (resolve, reject)
+					return new Promise(function (resolve)
 					{
 					//api - http://api.lololyrics.com/
 
@@ -212,18 +224,24 @@ class Options
 				onload: function (response)
 				{
 					if (debug) console.log(response);
-					let xml = response.responseXML.all;
-
-					if (xml[1].textContent === "OK")
+					if (response.status === 200)
 					{
-						lyrics = xml[2].innerHTML;
-						if (debug) console.log(lyrics);
-						AddCache(id, artist, title, lyrics);
-						DisplayLyrics(id, title);
-						resolve(true);
+						let xml = response.responseXML.all;
+
+						if (xml[1].textContent === "OK")
+						{
+							lyrics = xml[2].innerHTML;
+							if (debug) console.log(lyrics);
+							AddCache(id, artist, title, lyrics);
+							DisplayLyrics(id, title);
+							resolve(true);
+						} else
+						{
+							if (debug) console.log(xml);
+							resolve(false);
+						}
 					} else
 					{
-						if (debug) console.log(xml);
 						resolve(false);
 					}
 				},
@@ -237,7 +255,7 @@ class Options
 				}
 			case "last":
 				{
-					return new Promise(function (resolve, reject)
+					return new Promise(function (resolve)
 					{
 						if (debug) console.log("No lyrics found!");
 						DisplayLyrics(id, title, "No lyrics found!");
