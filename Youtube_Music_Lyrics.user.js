@@ -6,7 +6,7 @@
 // @require     https://code.jquery.com/jquery-3.5.1.min.js
 // @require     https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @author      TiLied
-// @version     0.2.01
+// @version     0.2.02
 // @grant       GM_listValues
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -164,7 +164,7 @@ class Options
 							},
 							onerror: function (e)
 							{
-								console.error(e);
+								console.warn(e);
 								resolve(false);
 							}
 							});
@@ -190,6 +190,7 @@ class Options
 						{
 							lyrics = r["lyric"];
 							if (debug) console.log(lyrics);
+							lyrics = HtmlDecode(lyrics);
 							AddCache(id, artist, title, lyrics);
 							DisplayLyrics(id, title);
 							resolve(true);
@@ -205,7 +206,7 @@ class Options
 				},
 				onerror: function (e)
 				{
-					console.error(e);
+					console.warn(e);
 					resolve(false);
 				}
 			});
@@ -247,7 +248,7 @@ class Options
 				},
 				onerror: function (e)
 				{
-					console.error(e);
+					console.warn(e);
 					resolve(false);
 				}
 			});
@@ -275,7 +276,7 @@ async function SetSettings(callBack)
 {
 	try
 	{
-		//DeleteValues("yml_options");
+		//DeleteValues("yml_cache");
 		//THIS IS ABOUT OPTIONS
 		if (await HasValue("yml_options", JSON.stringify(options)))
 		{
@@ -304,9 +305,13 @@ async function SetSettings(callBack)
 		//Find out that var in for block is not local... Seriously js?
 		for (let i = 0; i < vals.length; i++)
 		{
-			console.log("*" + vals[i] + ":" + await GM.getValue(vals[i]));
+			let str = await GM.getValue(vals[i]);
+			console.log("*" + vals[i] + ":" + str);
+			const byteSize = str => new Blob([str]).size;
+			console.log("Size " + vals[i] + ": " + FormatBytes(byteSize(str)) + "");
 		}
 		console.log("*-----*");
+
 		if (debug)
 		{
 			console.log(options);
@@ -461,7 +466,7 @@ function SetCacheObj()
 				//DeleteValues("yml_cache");
 			}
 		}
-	} catch (e) { console.error(e); }
+	} catch (e) { console.warn(e); }
 }
 //Functions create object option and cache
 //End
@@ -484,7 +489,7 @@ function Music()
 	}
 
 	if (artist === "" || title === "" || typeof id === "undefined" || typeof artist === "undefined" || typeof title === "undefined" )
-		return console.error(artist + "-" + title + "-" + id);
+		return console.warn(artist + "-" + title + "-" + id);
 
 	if (tTitle === 0 || title !== tTitle)
 	{
@@ -866,4 +871,32 @@ function UrlHandler()
 	};
 })(jQuery);
 //Tool for changing tags https://stackoverflow.com/a/32067355
+//End
+
+//Start
+//Tool for decoding staff like &#xxxx; https://stackoverflow.com/a/2808386
+function HtmlDecode(input)
+{
+	var e = document.createElement('div');
+	e.innerHTML = input;
+	return e.childNodes[0].nodeValue;
+}
+//Tool for decoding staff like &#xxxx; https://stackoverflow.com/a/2808386
+//End
+
+//Start
+//Format bytes https://stackoverflow.com/a/18650828
+function FormatBytes(bytes, decimals = 2)
+{
+	if (bytes === 0) return '0 Bytes';
+
+	const k = 1024;
+	const dm = decimals < 0 ? 0 : decimals;
+	const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+//Format bytes https://stackoverflow.com/a/18650828
 //End
