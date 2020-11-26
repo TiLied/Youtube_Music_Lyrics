@@ -6,7 +6,7 @@
 // @require     https://code.jquery.com/jquery-3.5.1.min.js
 // @require     https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @author      TiLied
-// @version     0.2.02
+// @version     0.2.03
 // @grant       GM_listValues
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -149,9 +149,16 @@ class Options
 									{
 										lyrics = r["lyrics"];
 										if (debug) console.log(lyrics);
-										AddCache(id, artist, title, lyrics);
-										DisplayLyrics(id, title);
-										resolve(true);
+										if (lyrics)
+										{
+											AddCache(id, artist, title, lyrics);
+											DisplayLyrics(id, title);
+											resolve(true);
+										} else
+										{
+											if (debug) console.log(r);
+											resolve(false);
+										}
 									} else
 									{
 										if (debug) console.log(r);
@@ -628,6 +635,8 @@ function SetUI()
 	<li class='ui-state-default' id='three'><span>api-http://api.lololyrics.com/</span></li>\
 	<li class='ui-state-default ui-state-disabled' id='last' style='display:none;'>Last Not Found!</li>\
 </ul >\
+		<br>\
+		<button id=yml_clearCache >Clear cache</button><br> \
 </form>");
 
 	if (debug)
@@ -661,7 +670,7 @@ function UIValues()
 		$(li[i]).find("span").text(Options.string(options.priority[i]));
 	}
 }
-//Function set events
+//Function set UI values of settengs/options
 //End
 
 //Start
@@ -823,6 +832,13 @@ function SetEvents()
 		}
 	});
 
+	$('#yml_clearCache').click(function ()
+	{
+		cache = {};
+		SetCacheObj();
+		UpdateGM("cache");
+	});
+
 }
 //Function set events
 //End
@@ -874,14 +890,14 @@ function UrlHandler()
 //End
 
 //Start
-//Tool for decoding staff like &#xxxx; https://stackoverflow.com/a/2808386
+//Tool for decoding stuff like &#xxxx; https://stackoverflow.com/a/2808386
 function HtmlDecode(input)
 {
 	var e = document.createElement('div');
 	e.innerHTML = input;
 	return e.childNodes[0].nodeValue;
 }
-//Tool for decoding staff like &#xxxx; https://stackoverflow.com/a/2808386
+//Tool for decoding stuff like &#xxxx; https://stackoverflow.com/a/2808386
 //End
 
 //Start
