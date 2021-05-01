@@ -2,7 +2,7 @@
 ### Download
 https://greasyfork.org/en/scripts/404273
 ### Description
-
+### No need a script anymore, use native lyrics! But it might be useful to someone, plus you can save lyrics to show them later without googling again.
 Adds lyrics to Youtube Music.
 
 Api using:
