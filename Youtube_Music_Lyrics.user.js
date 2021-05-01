@@ -6,7 +6,7 @@
 // @require     https://code.jquery.com/jquery-3.6.0.min.js
 // @require     https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @author      TiLied
-// @version     0.3.00
+// @version     0.3.01
 // @grant       GM_listValues
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -61,13 +61,22 @@ class Options2
 
 						if ($(_bs[1]).attr("aria-selected") === "true")
 						{
-							let _l = $(".non-expandable.description");
-
-							if (typeof _l === "undefined" || _l === null || _l.length === 0)
-							{
+							let _m = $("[page-type='MUSIC_PAGE_TYPE_TRACK_LYRICS']");
+							if (typeof _m === "undefined")
 								resolve("Lyrics not found!");
-							}
-							resolve($(_l).text());
+
+							setTimeout(() =>
+							{
+								let _l = $(_m).find(".non-expandable.description:visible");
+
+								if (typeof _l === "undefined" || _l === null || _l.length === 0 || $(_l).attr("hidden") === true)
+								{
+									resolve("Lyrics not found!");
+								}
+
+								resolve($(_l).text());
+							}, oneSecond + oneSecond);
+
 						} else
 						{
 							resolve("Lyrics not found!");
@@ -546,7 +555,7 @@ void function Main2()
 
 					//Url handler for changing
 					UrlHandler(options2, cache2);
-				}, 5000);
+				}, oneSecond * 5);
 			});
 		});
 	});
@@ -562,7 +571,12 @@ async function Music2(options2, cache2)
 
 	let title = document.querySelector(".title.ytmusic-player-bar").innerText;
 
-	let id = document.querySelector(".subtitle.ytmusic-player-bar").firstElementChild.firstElementChild.attributes.href.value;
+	let _h = document.querySelector(".subtitle.ytmusic-player-bar").firstElementChild.firstElementChild.attributes.href;
+
+	if (typeof _h === "undefined")
+		return console.warn(_h);
+
+	let id = _h.value;
 	
 	if (artist === "" || title === "" || typeof id === "undefined" || typeof artist === "undefined" || typeof title === "undefined")
 		return console.warn(artist + "-" + title + "-" + id);
@@ -612,7 +626,7 @@ async function Music2(options2, cache2)
 	}
 
 	//display
-	$("#yml_musicName").text(artist + "-" + title + ":");
+	$("#yml_musicName").text(artist + " - " + title + ":");
 	$("#yml_lyricsPanel pre").text("\r\n\r\n" + cache2[id]["musics"][title]["lyrics"]);
 
 	//save lyrics
@@ -709,7 +723,9 @@ function SetCSS()
 	font-family: inherit;\
 		font-size:20px;\
 	padding-left: 15%;\
+		padding-top: 5%;\
 }"));
+
 	$("head").append($("<style type=text/css></style>").text("#yml_PanelButtons { \
 	float: right;\
 	padding:10px;\
