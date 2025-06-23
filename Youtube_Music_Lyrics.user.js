@@ -1,12 +1,13 @@
 ﻿// ==UserScript==
 // @name        Youtube Music Lyrics
 // @namespace   https://greasyfork.org/users/102866
-// @description Adds lyrics to Youtube Music 
-// @include     https://music.youtube.com/*
-// @require     https://code.jquery.com/jquery-3.6.0.min.js
-// @require     https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
+// @description Adds lyrics to Youtube Music
+// @match     https://music.youtube.com/*
+// @require     https://code.jquery.com/jquery-3.7.1.min.js
+// @require     https://code.jquery.com/ui/1.14.1/jquery-ui.min.js
+// @require     https://cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js
 // @author      TiLied
-// @version     0.3.01
+// @version     0.3.02
 // @grant       GM_listValues
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -26,6 +27,8 @@ const oneSecond = 1000,
 	oneDay = oneSecond * 60 * 60 * 24,
 	oneWeek = oneDay * 7,
 	oneMonth = oneWeek * 4;
+
+let setupSearchOnce = true;	
 
 class Options2 
 {
@@ -574,7 +577,7 @@ async function Music2(options2, cache2)
 	let _h = document.querySelector(".subtitle.ytmusic-player-bar").firstElementChild.firstElementChild.attributes.href;
 
 	if (typeof _h === "undefined")
-		return console.warn(_h);
+		return console.warn(".subtitle.ytmusic-player-bar: " + _h);
 
 	let id = _h.value;
 	
@@ -647,7 +650,7 @@ function SetUI(options2)
 	let divP = $("<div id=yml_lyricsPanel class='style-scope ytmusic-player-page'></div>").html("<header id=yml_musicName></header><pre id=yml_lyricsText class='style-scope ytmusic-player-baryt-formatted-string'>Lyrics:</pre>");
 	let divB = $("<div id=yml_lyricsButton class='right-controls-buttons style-scope ytmusic-player-bar'></div>").html("<a class='yml_Button style-scope ytmusic-player-bar yt-formatted-string' style='color:inherit;'>Lyrics</a>");
 
-	let divPB = $("<div id=yml_PanelButtons class='style-scope ytmusic-player-page'></div>").html("<a class='yml_Button' id=yml_addLyricsButton>Add lyrics</a><a class='yml_Button' id=yml_optionButton style='padding-left: 10px;'>Options</a>");
+	let divPB = $("<div id=yml_PanelButtons class='style-scope ytmusic-player-page'></div>").html("<a class='yml_Button' id=yml_addLyricsButton>Add lyrics</a><a class='yml_Button' id=yml_optionButton style='padding-left: 10px;'>Options</a><a class='yml_Button' id=yml_searchButton style='padding-left: 10px;'>Search</a>");
 
 	let divPO = $("<div id=yml_optionsPanel class='style-scope ytmusic-player-page'></div>").html("<a class='style-scope ytmusic-player-baryt-formatted-string' style='color:inherit; font-family:inherit;'>Options:</a><form>\
 <br>\
@@ -665,14 +668,62 @@ function SetUI(options2)
 		<a class='yml_Button' id=yml_clearCache >Clear cache</a><br> \
 </form>");
 
+	let divSearchPanel = document.createElement("div");
+	divSearchPanel.id = "yml_searchPanel";
+	divSearchPanel.classList += "style-scope ytmusic-player-page";
+	
+	divSearchPanel.innerHTML = "<div id='yml_searchMusics'>\
+		<button id=yml_closeSearch>Close</button>\
+	<div id=yml_filters>\
+		<div id=yml_filterZeroGrid>\
+			<input class='filter yml_searchArtist' type='text' placeholder='Search Artist'/>\
+			<input class='filter yml_searchTitle' type='text' placeholder='Search Title' />\
+			<input class='filter yml_searchLyrics' type='text' placeholder='Search Lyrics' />\
+		</div>\
+		<hr size='1' noshade=''>\
+		<div id=yml_filterOneGrid>\
+			<input class='filter yml_filterGettingLyricsForArtistTimes' type='text' pattern='(>|<|) \\d + ' placeholder='Filter GettingLyricsForArtistTimes(x,> x, <x)' />\
+			<input class='filter yml_filterGettingLyricsForMusicTimes' type='text' pattern='(>|<|) \\d + ' placeholder='Filter GettingLyricsForMusicTimes(x,> x, <x)' />\
+		</div>\
+		<hr size='1' noshade=''>\
+		<div id=yml_filterTwoGrid>\
+			<label for='yml_filterAddedDateA'>Added After:</label>\
+			<input id='yml_filterAddedDateA' class='filter yml_filterAddedDateA' type='date' placeholder='Added After' />\
+			<label for='yml_filterAddedDateB'>Added Before:</label>\
+			<input id='yml_filterAddedDateB' class='filter yml_filterAddedDateB' type='date' placeholder='Added Before' />\
+		</div>\
+		<hr size='1' noshade=''>\
+	</div>\
+	<div id=yml_sortGrid>\
+		<button class='yml_sort' data-sort='artist'>Sort by artist</button >\
+		<button class='yml_sort' data-sort='title'>Sort by title</button >\
+		<button class='yml_sort' data-sort='dateId'>Sort by date</button >\
+		<button class='yml_sort' data-sort='gettingLyricsForArtistTimes'>Sort by gettingLyricsForArtistTimes</button >\
+		<button class='yml_sort' data-sort='gettingLyricsForMusicTimes'>Sort by gettingLyricsForMusicTimes</button >\
+	</div>\
+	<input class='yml_search' placeholder='Global Search' />\
+	<span id=yml_resultCount></span>\
+	<ul class='paginationTop pagination'></ul>\
+	<hr size='1' noshade=''>\
+	<ul class='yml_list' ></ul>\
+	<hr size='1' noshade=''>\
+	<ul class='paginationBottom pagination'></ul>\
+</div>\
+";
+
 	$(divP).append(divPB);
 	$(divP).prepend(divPO);
 	$(mainP).append(divP);
+	
+	document.body.append(divSearchPanel);
+	
 	$(rightC).append(divB);
 
 	$(divP).hide();
 	$(divPO).hide();
-
+	
+	divSearchPanel.style.visibility = "hidden";
+	
 	UIValues(options2);
 }
 //Function set ui 
@@ -744,7 +795,142 @@ function SetCSS()
 		overflow-y:scroll;\
 		color:#aaaaaa;\
 }"));
+	
+	$("head").append($("<style type=text/css></style>").text("#yml_searchPanel { \
+	position: fixed;\
+	z-index: 111;\
+	padding-left: 5%;\
+	padding-right: 5%;\
+	padding-bottom: 5%;\
+	border: 1px solid;\
+	background-color: #2d2d2d;\
+	font-size:16px;\
+	overflow-y:scroll;\
+	color:#aaaaaa;\
+	max-height: 50%;\
+}"));
+	
+	$("head").append($("<style type=text/css></style>").text(".yml_searchItem { \
+	display: grid;\
+  	grid-gap: 5px;\
+  	border: 1px solid;\
+	padding: 5px;\
+}"));
+	
+	$("head").append($("<style type=text/css></style>").text(".yml_subItem { \
+	border: 1px solid;\
+	display: grid;\
+  	grid-template-columns: 20% 30% 20% 30%;\
+}"));
+	
+	$("head").append($("<style type=text/css></style>").text('.yml_sort {\
+	padding: 8px 30px;\
+	border-radius: 6px;\
+	border: none;\
+	display: inline-block;\
+	color: #fff;\
+	text-decoration: none;\
+	background-color: #28a8e0;\
+	height: 50px;\
+}\
+.yml_sort:hover {\
+	text-decoration: none;\
+	background-color:#1b8aba;\
+}\
+.yml_sort:focus {\
+	outline: none;\
+}\
+.yml_sort:after {\
+	width: 0;\
+	height: 0;\
+	border-left: 5px solid transparent;\
+	border-right: 5px solid transparent;\
+	border-bottom: 5px solid transparent;\
+	content: "";\
+	position: relative;\
+	top: -10px;\
+	right: -5px;\
+}\
+.yml_sort.asc:after {\
+	width: 0;\
+	height: 0;\
+	border-left: 5px solid transparent;\
+	border-right: 5px solid transparent;\
+	border-top: 5px solid #fff;\
+	content: "";\
+	position: relative;\
+	top: 13px;\
+	right: -5px;\
+}\
+.yml_sort.desc:after {\
+	width: 0;\
+	height: 0;\
+	border-left: 5px solid transparent;\
+	border-right: 5px solid transparent;\
+	border-bottom: 5px solid #fff;\
+	content: "";\
+	position: relative;\
+	top: -10px;\
+	right: -5px;\
+}'));
+	
+	$("head").append($("<style type=text/css></style>").text('.yml_search {\
+	width: 75%;\
+	margin-bottom: 5px;\
+	text-align: center;\
+	background: linear-gradient(#eee, #fff);\
+	border: 1px solid rgba(255, 255, 255, 0.6);\
+	box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.4);\
+	padding: 5px;\
+	position: relative;\
+	display: block;\
+	margin-top: 5px;\
+	margin-right: auto;\
+	margin-bottom: 5px;\
+	margin-left: auto;}'));
+	
+	$("head").append($("<style type=text/css></style>").text('#yml_sortGrid {display: grid;\
+	grid-template-columns: repeat(5, 1fr);\
+	grid-gap: 5px;}'));
+	
+	$("head").append($("<style type=text/css></style>").text('.highlight{background-color: purple;}'));
+	
+	$("head").append($("<style type=text/css></style>").text(".pagination li { \
+		cursor: pointer;\
+		display: inline-block;\
+		padding: 5px;\
+		margin-top: 5px;\
+		margin-bottom: 5px;\
+		align-content: center;\
+	}"));
+	
+	$("head").append($("<style type=text/css></style>").text('.pagination {display: flex;\
+		justify-content: center;}'));
+	
+	$("head").append($("<style type=text/css></style>").text('.active {font-size: 20px;'));
+	
+	$("head").append($("<style type=text/css></style>").text('#yml_resultCount {display: flex;\
+			justify-content: center;\
+			font-size: 25px;\
+			background-color: #4e4d4d;\
+			color: white;\
+				}'));
 
+	$("head").append($("<style type=text/css></style>").text('#yml_filterZeroGrid {display: grid;\
+					grid-template-columns: repeat(3, 1fr);\
+					grid-gap: 5px;\
+					margin: 5px;}'));
+	
+	$("head").append($("<style type=text/css></style>").text('#yml_filterOneGrid {display: grid;\
+						grid-template-columns: repeat(2, 1fr);\
+						grid-gap: 5px;\
+						margin: 5px;}'));
+
+	$("head").append($("<style type=text/css></style>").text('#yml_filterTwoGrid {display: grid;\
+							grid-template-columns: repeat(4, 0.2fr);\
+							grid-gap: 5px;\
+							margin: 5px;}'));
+	
 	$("head").append($("<style type=text/css></style>").text(".yml_Button { \
 	cursor: pointer;\
 		font-size:16px;\
@@ -768,7 +954,7 @@ function SetCSS()
 //Function set events
 function SetEvents(options2, cache2)
 {
-	$("#yml_lyricsButton").click(function ()
+	$("#yml_lyricsButton").on("click", function ()
 	{
 		$("#yml_lyricsPanel").toggle(500);
 
@@ -780,7 +966,7 @@ function SetEvents(options2, cache2)
 		});
 	});
 
-	$("#yml_optionButton").click(function ()
+	$("#yml_optionButton").on("click", function ()
 	{
 		$("#yml_optionsPanel").toggle();
 
@@ -793,18 +979,244 @@ function SetEvents(options2, cache2)
 			$(this).text("Options");
 		}
 	});
+	
+	document.getElementById("yml_closeSearch").addEventListener("click", () =>
+	{
+		document.getElementById("yml_searchPanel").style.visibility = "hidden";	
+	});
+	
+	document.getElementById("yml_searchButton").addEventListener("click", () =>
+	{
+		let _panel = document.getElementById("yml_searchPanel");
+		if (_panel.style.visibility == "hidden")
+			_panel.style.visibility = "visible";
+		else
+		{
+			_panel.style.visibility = "hidden";
+			
+		}
+		
+		if (setupSearchOnce)
+		{
+			let options = {
+				valueNames: [
+					'artist',
+					'gettingLyricsForArtistTimes',
+					'id',
+					'url',
+					{ name: 'urlHref', attr: 'href' },
+					{ name: 'dateId', attr: 'data-xutime' },
+					'date',
+					'gettingLyricsForMusicTimes',
+					'lyrics',
+					'title'],
+				
+				page: 25,
+				
+				pagination: [{
+					name: "paginationTop",
+					paginationClass: "paginationTop",
+					outerWindow: 2,
+					innerWindow: 3,
+					item: "<li><a class='page'></a></li>"
+				}, {
+					name: "paginationBottom",
+					paginationClass: "paginationBottom",
+					outerWindow: 2,
+					innerWindow: 3,
+					item: "<li><a class='page'></a></li>"
+					}],
+				
+				listClass: "yml_list",
+				searchClass: "yml_search",
+				sortClass: "yml_sort",
+				item: "<div class='yml_searchItem'>\
+							<div class='yml_subItem' style='font-size:x-large; color:#fff; display:block;'><span class='artist'></span> - <span class='title'></span></div>\
+							<div class='yml_subItem' style='font-size:small;'>Getting Lyrics For Artist Times: <span class='gettingLyricsForArtistTimes'></span> Getting Lyrics For Music Times: <span class='gettingLyricsForMusicTimes'></span></div>\
+							<div class='yml_subItem'>Id: <span class='id'></span> Url: <a class='url urlHref' style='color:inherit;'></a></div >\
+							<div class='yml_subItem' style='font-size:small;'>Added Date: <span class='date dateId'></span></div>\
+							<div>Lyrics: </br><span class='lyrics'></span></div>\
+						</div>"
+			};
+			
+			let _searchItems = [];
+			let _values = Object.values(cache2);
+			let _y = 0;
+			for (let i = 1; i < _values.length; i++)
+			{
+				let _musicValues = Object.values(_values[i].musics);
+				for (let j = 0; j < _musicValues.length; j++)
+				{
+					_searchItems.push({});
+					
+					_searchItems[_y]["artist"] = _values[i].artist;
+					_searchItems[_y]["gettingLyricsForArtistTimes"] = _values[i].gettingLyricsForArtistTimes;
+					_searchItems[_y]["id"] = _values[i].id;
+					_searchItems[_y]["url"] = _values[i].url;
+					_searchItems[_y]["urlHref"] = _values[i].url;
+					
+					_searchItems[_y]["dateId"] = _musicValues[j].dateId;
+					_searchItems[_y]["date"] = new Date(_musicValues[j].dateId).toString()
+					_searchItems[_y]["gettingLyricsForMusicTimes"] = _musicValues[j].gettingLyricsForMusicTimes;
+					_searchItems[_y]["lyrics"] = _musicValues[j].lyrics;
+					_searchItems[_y]["title"] = _musicValues[j].title;
+					
+					_y++;
+				}
+			}
+			
+			//TODO!
+			//Erase elements when hiding and add them when showing search panel
+			let musicList = new List('yml_searchMusics', options, _searchItems);
+			
+			$('.yml_searchArtist').on("keyup", function ()
+			{
+				let searchString = $(this).val();
+				musicList.search(searchString, ['artist']);
+			});
 
-	$("#yml_debug").change(function ()
+			$('.yml_searchTitle').on("keyup", function ()
+			{
+				let searchString = $(this).val();
+				musicList.search(searchString, ['title']);
+			});
+			
+			$('.yml_searchLyrics').on("keyup", function ()
+			{
+				let searchString = $(this).val();
+				musicList.search(searchString, ['lyrics']);
+			});
+
+			musicList.on("updated", function ()
+			{
+				$(".yml_searchItem").unhighlight();
+				let search = $(".yml_search").val() || $(".yml_searchArtist").val() || $(".yml_searchTitle").val() || $(".yml_searchLyrics").val();
+				let words = search.split(" ");
+				$(".yml_searchItem").highlight(words);
+				$("#yml_resultCount").text(musicList.matchingItems.length);
+			});
+			
+			$('.yml_filterGettingLyricsForArtistTimes, .yml_filterGettingLyricsForMusicTimes, .yml_filterAddedDateA, .yml_filterAddedDateB').on('keyup change', function ()
+			{
+				let number = [];
+
+				let raw = [$(".yml_filterGettingLyricsForArtistTimes").val(),
+					$(".yml_filterGettingLyricsForMusicTimes").val(),
+					$(".yml_filterAddedDateA").val(),
+					$(".yml_filterAddedDateB").val(),
+				];
+
+				let fsp = ["gettingLyricsForArtistTimes",
+					"gettingLyricsForMusicTimes",
+					"dateId",
+					"dateId"];
+
+				let im = [];
+
+				for (let i = 0; i < raw.length; i++)
+				{
+					if (raw[i].match(">"))
+					{
+						number[i] = Number(raw[i].substr(1));
+					} else if (raw[i].match("<"))
+					{
+						number[i] = Number(raw[i].substr(1));
+					} else { number[i] = Number(raw[i]); }
+
+					if (i == 2 || i == 3)
+					{
+						if (raw[i] === "")
+							number[i] = 0;
+						else
+							number[i] = new Date(raw[i]).getTime();
+					}
+				}
+
+				musicList.filter(function (item)
+				{
+					for (let i = 0; i < raw.length; i++)
+					{
+						if (raw[i] === "") continue;
+
+						if (i == 2)
+						{
+							if (item.values()[fsp[i]] >= number[i])
+							{
+								im.push(true);
+							}
+							else
+							{
+								return false;
+							}
+						 
+						}else if(i == 3)
+						{
+							if (item.values()[fsp[i]] <= number[i])
+							{
+								im.push(true);
+							}
+							else
+							{
+								return false;
+							}
+						} else
+						{
+							if (raw[i].match(">"))
+							{
+								if (item.values()[fsp[i]] >= number[i])
+								{
+									im.push(true);
+								}
+								else
+								{
+									return false;
+								}
+							} else if (raw[i].match("<"))
+							{
+								if (item.values()[fsp[i]] <= number[i])
+									im.push(true);
+								else
+									return false;
+							} else if (item.values()[fsp[i]] === number[i])
+							{
+								im.push(true);
+							} else
+								return false;
+						}
+					}
+
+					if (im.every(e => e === true))
+						return true;
+					else
+						return false;
+
+				}); // Only items with id > 1 are shown in list
+
+				if (raw.every(e => e === ""))
+				{
+					musicList.filter();
+				}
+
+				$("#yml_resultCount").text(musicList.matchingItems.length);
+			});
+			
+			$("#yml_resultCount").text(musicList.size());
+			
+			setupSearchOnce = false;
+		}
+	});
+	
+	$("#yml_debug").on("change", function ()
 	{
 		options2.debug = $(this).prop("checked");
 	});
 
-	$("#yml_contextmenu").change(function ()
+	$("#yml_contextmenu").on("change", function ()
 	{
 		options2.contextmenu = $(this).prop("checked");
 	});
 
-	$("#yml_addLyricsButton").click(function ()
+	$("#yml_addLyricsButton").on("click", function ()
 	{
 		//TODO MAKE BETTER CODE!!!
 		let _text = document.getElementById("yml_lyricsText");
@@ -870,7 +1282,7 @@ function SetEvents(options2, cache2)
 		}
 	});
 
-	$('#yml_clearCache').click(function ()
+	$('#yml_clearCache').on("click", function ()
 	{
 		Options2._GMDeleteValues("yml_cache2");
 
@@ -959,3 +1371,179 @@ function FormatBytes(bytes, decimals = 2)
 }
 //Format bytes https://stackoverflow.com/a/18650828
 //End
+
+/*
+ * jQuery Highlight plugin
+ *
+ * Based on highlight v3 by Johann Burkard
+ * http://johannburkard.de/blog/programming/javascript/highlight-javascript-text-higlighting-jquery-plugin.html
+ *
+ * Code a little bit refactored and cleaned (in my humble opinion).
+ * Most important changes:
+ *  - has an option to highlight only entire words (wordsOnly - false by default),
+ *  - has an option to be case sensitive (caseSensitive - false by default)
+ *  - highlight element tag and class names can be specified in options
+ *
+ * Usage:
+ *   // wrap every occurrence of text 'lorem' in content
+ *   // with <span class='highlight'> (default options)
+ *   $('#content').highlight('lorem');
+ *
+ *   // search for and highlight more terms at once
+ *   // so you can save some time on traversing DOM
+ *   $('#content').highlight(['lorem', 'ipsum']);
+ *   $('#content').highlight('lorem ipsum');
+ *
+ *   // search only for entire word 'lorem'
+ *   $('#content').highlight('lorem', { wordsOnly: true });
+ *
+ *   // search only for the entire word 'C#'
+ *   // and make sure that the word boundary can also
+ *   // be a 'non-word' character, as well as a regex latin1 only boundary:
+ *   $('#content').highlight('C#', { wordsOnly: true , wordsBoundary: '[\\b\\W]' });
+ *
+ *   // don't ignore case during search of term 'lorem'
+ *   $('#content').highlight('lorem', { caseSensitive: true });
+ *
+ *   // wrap every occurrence of term 'ipsum' in content
+ *   // with <em class='important'>
+ *   $('#content').highlight('ipsum', { element: 'em', className: 'important' });
+ *
+ *   // remove default highlight
+ *   $('#content').unhighlight();
+ *
+ *   // remove custom highlight
+ *   $('#content').unhighlight({ element: 'em', className: 'important' });
+ *
+ *
+ * Copyright (c) 2009 Bartek Szopka
+ *
+ * Licensed under MIT license.
+ *
+ */
+
+(function (factory)
+{
+	if (typeof define === 'function' && define.amd)
+	{
+		// AMD. Register as an anonymous module.
+		define(['jquery'], factory);
+	} else if (typeof exports === 'object')
+	{
+		// Node/CommonJS
+		factory(require('jquery'));
+	} else
+	{
+		// Browser globals
+		factory(jQuery);
+	}
+}(function (jQuery)
+{
+	jQuery.extend({
+		highlight: function (node, re, nodeName, className, callback)
+		{
+			if (node.nodeType === 3)
+			{
+				var match = node.data.match(re);
+				if (match)
+				{
+					// The new highlight Element Node
+					var highlight = document.createElement(nodeName || 'span');
+					highlight.className = className || 'highlight';
+					// Note that we use the captured value to find the real index
+					// of the match. This is because we do not want to include the matching word boundaries
+					var capturePos = node.data.indexOf(match[1], match.index);
+
+					// Split the node and replace the matching wordnode
+					// with the highlighted node
+					var wordNode = node.splitText(capturePos);
+					wordNode.splitText(match[1].length);
+
+					var wordClone = wordNode.cloneNode(true);
+					highlight.appendChild(wordClone);
+					wordNode.parentNode.replaceChild(highlight, wordNode);
+					if (typeof callback === 'function')
+					{
+						callback(highlight);
+					}
+					return 1; //skip added node in parent
+				}
+			} else if ((node.nodeType === 1 && node.childNodes) && // only element nodes that have children
+				!/(script|style)/i.test(node.tagName) && // ignore script and style nodes
+				!(node.tagName === nodeName.toUpperCase() && node.className === className))
+			{ // skip if already highlighted
+				for (var i = 0; i < node.childNodes.length; i++)
+				{
+					i += jQuery.highlight(node.childNodes[i], re, nodeName, className, callback);
+				}
+			}
+			return 0;
+		}
+	});
+
+	jQuery.fn.unhighlight = function (options)
+	{
+		var settings = {
+			className: 'highlight',
+			element: 'span'
+		};
+
+		jQuery.extend(settings, options);
+
+		return this.find(settings.element + '.' + settings.className).each(function ()
+		{
+			var parent = this.parentNode;
+			parent.replaceChild(this.firstChild, this);
+			parent.normalize();
+		}).end();
+	};
+
+	jQuery.fn.highlight = function (words, options, callback)
+	{
+		var settings = {
+			className: 'highlight',
+			element: 'span',
+			caseSensitive: false,
+			wordsOnly: false,
+			wordsBoundary: '\\b'
+		};
+
+		jQuery.extend(settings, options);
+
+		if (typeof words === 'string')
+		{
+			words = [words];
+		}
+		words = jQuery.grep(words, function (word, i)
+		{
+			return word !== '';
+		});
+		words = jQuery.map(words, function (word, i)
+		{
+			return word.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+		});
+
+		if (words.length === 0)
+		{
+			return this;
+		}
+
+		var flag = settings.caseSensitive ? '' : 'i';
+		// The capture parenthesis will make sure we can match
+		// only the matching word
+		var pattern = '(' + words.join('|') + ')';
+		if (settings.wordsOnly)
+		{
+			pattern =
+				(settings.wordsBoundaryStart || settings.wordsBoundary) +
+				pattern +
+				(settings.wordsBoundaryEnd || settings.wordsBoundary);
+		}
+		var re = new RegExp(pattern, flag);
+
+		return this.each(function ()
+		{
+			jQuery.highlight(this, re, settings.element, settings.className, callback);
+		});
+	};
+}));
